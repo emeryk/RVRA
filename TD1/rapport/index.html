@@ -1,0 +1,225 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>RVRA - Labbe Emeric</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github-gist.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="toc.min.js"></script>
+
+<script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+      }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div id="toc"></div>
+
+<div id="content">
+
+<h1>RVRA - Labbé Emeric</h1>
+
+<h2>TD 1 - Navigation 3D et interactions simples</h2>
+
+<h3>1. Première scène 3D</h3>
+
+<h4>1.1 La caméra, les premiers cubes et textures</h4>
+
+<p>Une première scène a été réalisée, celle ci contient un premier niveau de cube ayant la texture 'sand', un second niveau contenant des cubes ayant aléatoirement la texture stone1 ou stone2. Un cube de TNT est placé par dessus, celui ci a deux textures différentes selon sa face (les faces 2 et 3 sont différentes des autres).</p>
+
+<div class="highlight">Réalisation des cubes stone :
+<pre><code class="cpp">for (var i = - 3; i <= 3; i++)
+{
+  for (var y = 0; y < 5; y++)
+  {
+    geometry = new THREE.CubeGeometry(100, 100, 100);
+    var rand = Math.floor(Math.random() * 2) + 1; //Random 1 - 2
+    if (rand == 1) {
+      material = new THREE.MeshBasicMaterial({map : tstone1});
+    }
+    else {
+      material = new THREE.MeshBasicMaterial({map : tstone2});
+    }
+
+    mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = i * 100;
+    mesh.position.y = - 100;
+    mesh.position.z = y * 100;
+    scene.add(mesh);
+  }
+}
+</code></pre></div>
+
+<figure>
+	<img src="2.png" width="800" alt="rendu scene 1" />
+	<figcaption>Première scène réalisée</figcaption>
+</figure>
+
+<h3>2. Vue à la première personne</h3>
+
+<h4>2.1 Les commandes</h4>
+
+<p>On peut se déplacer dans la scène avec les commandes du clavier (flèches directionnelles et '+' '-').</p>
+
+<p>On peut bloquer le pointeur de la souris pour qu'il reste dans la fenetre grace à l'appel de lockPointer() dans le fichier index.html</p>
+
+<div class="highlight">La gestion des controles :
+<pre><code class="cpp">controls = new THREE.PointerLockControls(camera);
+controls.enabled = true;
+scene.add(controls.getObject());
+
+//EVENT
+var onKeyDown = function(event) {
+  switch(event.keyCode) {
+    case 40 :
+      moveBackward = true;
+      break;
+    case 39 :
+      moveRight = true;
+      break;
+    case 38 :
+      moveForward = true;
+      break;
+    case 37 :
+      moveLeft = true;
+      break;
+    case 107 : //+
+      zoomP = true;
+      break;
+    case 109 : //-
+      zoomM = true;
+      break;
+  }
+};
+</code></pre></div>
+
+<div class="highlight">Mouvements :
+<pre><code class="cpp">if (moveForward)
+  controls.getObject().translateY(-5);
+if (moveBackward)
+  controls.getObject().translateY(5);
+if (moveLeft)
+  controls.getObject().translateX(5);
+if (moveRight)
+  controls.getObject().translateX(-5);
+if (zoomP)
+  controls.getObject().translateZ(-5);
+if (zoomM)
+  controls.getObject().translateZ(5);
+</code></pre></div>
+
+<h4>2.2 Caméra orthographique et cible</h4>
+
+<p>Une croix blanche est dessinée au centre de la scène, celle ci est sur une deuxième scène qui est liée à une deuxième caméra, elle reste ainsi toujours à la même place quand on déplace nos cubes.</p>
+
+<div class="highlight">Deuxième caméra et affichage d'une croix centrale
+<pre><code class="cpp">//CAMERA2
+camera2 = new THREE.OrthographicCamera( window.innerWidth / 2, - window.innerWidth / 2, window.innerHeight / 2, - window.innerHeight / 2 );
+camera2.position.set(0, 0, 10);
+scene2.add(camera2);
+
+//LINES
+var materialLine = new THREE.LineBasicMaterial({color : 0xffffff});
+var geometryLine = new THREE.Geometry();
+geometryLine.vertices.push(new THREE.Vector3(-20, 0, 0));
+geometryLine.vertices.push(new THREE.Vector3(20, 0, 0));
+geometryLine.vertices.push(new THREE.Vector3(0, 0, 0));
+geometryLine.vertices.push(new THREE.Vector3(0, 20, 0));
+geometryLine.vertices.push(new THREE.Vector3(0, -20, 0));
+var line = new THREE.Line(geometryLine, materialLine);
+scene2.add(line);
+</code></pre></div>
+
+<div class="highlight">Affichage de nos deux scènes :
+<pre><code class="cpp">renderer.clear();
+renderer.render(scene, camera);
+renderer.clearDepth();
+renderer.render(scene2, camera2);
+</code></pre></div>
+
+</p>
+
+<figure>
+	<img src="1.png" width="800" alt="rendu scene 2" />
+	<figcaption>Scène avec cible centrale</figcaption>
+</figure>
+
+<h3>3. Selection d'un objet</h3>
+
+<h4>3.1 Réalisation d'un offscreen buffer</h4>
+<p>Dans notre nouveau buffer, on applique la fonction applyFaceColor afin de donner à chaque cube une couleur correspondant à son id.
+En affichant notre nouveau buffer, on obtient alors la scène suivante :</p>
+
+<figure>
+  <img src="3.png" width="800" alt="rendu offscreenbuffer" />
+  <figcaption>OffScreen</figcaption>
+</figure>
+
+<h4>3.2 Destruction de bloc</h4>
+<p>On va utiliser la cible au centre de l'écran comme pointeur pour détruire nos cubes. On récupère dans un premier temps l'ID de l'objet que l'on cible, puis on le détruit. Three.js nous permet d'obtenir l'id d'un mesh créée très facilement.</p>
+
+<div class="highlight">Fonction pick, servant à sélectionner et détruire un objet de la scène :
+<pre><code class="cpp">var pick = function (event) {
+  scene.overrideMaterial = pickingMaterial;
+  renderer.render(scene, camera, pickingTexture);
+  var pixelBuffer = new Uint8Array(4);
+  renderer.readRenderTargetPixels(pickingTexture, innerWidth / 2, innerHeight / 2, 1, 1, pixelBuffer);
+  id = (pixelBuffer[0] << 16) | (pixelBuffer[1] << 8) | (pixelBuffer[2]);
+  obj = scene.getObjectById(id);
+  console.log(id);
+  scene.remove(obj);
+  scene.overrideMaterial = null;
+}
+
+document.addEventListener('click', pick);
+</code></pre></div>
+
+<figure>
+  <img src="4.png" width="800" alt="Scène partiellement détruite" />
+  <figcaption>Destroy</figcaption>
+</figure>
+
+</div>
+
+<script type="text/javascript">
+	$('#toc').toc({
+	    'selectors': 'h2,h3,h4', //elements to use as headings
+	    'container': 'body', //element to find all selectors in
+	    'smoothScrolling': true, //enable or disable smooth scrolling on click
+	    'prefix': 'toc', //prefix for anchor tags and class names
+	    'onHighlight': function(el) {}, //called when a new section is highlighted
+	    'highlightOnScroll': true, //add class to heading that is currently in focus
+	    'highlightOffset': 100, //offset to trigger the next headline
+	    'anchorName': function(i, heading, prefix) { //custom function for anchor name
+	        return prefix+i;
+	    },
+	    'headerText': function(i, heading, $heading) { //custom function building the header-item text
+	        return $heading.text();
+	    },
+	'itemClass': function(i, heading, $heading, prefix) { // custom function for item class
+	  return $heading[0].tagName.toLowerCase();
+	}
+	});
+</script>
+
+</body>

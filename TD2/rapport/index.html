@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>RVRA - Labbe Emeric</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github-gist.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="toc.min.js"></script>
+
+<script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+      }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div id="toc"></div>
+
+<div id="content">
+
+<h1>RVRA - Labbé Emeric</h1>
+
+<h2>TD2 - Stéréoscopie et profondeur de champ</h2>
+
+<h3>1. Stéréoscopie</h3>
+
+<h4>1.1. Principe général</h4>
+
+<p>On calcule dans un premier temps deux matrices, chacune étant adaptée à un oeil. Ces deux matrices vont servir de caméra, ainsi on aura une caméra pour chaque oeil, car ils n'ont pas le même champs de vision.</p>
+
+<div class="highlight">Création des matrices de vue gauche et droite :
+<pre><code class="cpp">var translateLeft = new THREE.Matrix4();
+translateLeft.makeTranslation(- ipd / 2.0, 0, 0);
+this.cameraLeft.matrixWorld.multiplyMatrices(this.cameraLeft.matrixWorld, translateLeft);
+this.cameraLeft.projectionMatrix.makePerspective(left2, left1, top, bot, camera.near, camera.far);
+
+var translateRight = new THREE.Matrix4();
+translateRight.makeTranslation(ipd / 2.0, 0, 0);
+this.cameraRight.matrixWorld.multiplyMatrices(this.cameraRight.matrixWorld, translateRight);
+this.cameraRight.projectionMatrix.makePerspective(-left1, -left2, top, bot, camera.near, camera.far);
+</code></pre></div>
+
+<figure>
+	<img src="image/cameraLeft.png" width="400" alt="Camera Left" >
+  <img src="image/cameraRight.png" width="400" alt="Camera Right" />
+  <figcaption>Vue Camera Left et Camera Right</figcaption>
+</figure>
+
+<h4>1.2 Anagyphe</h4>
+
+<p>On réalise maintenant un rendu anaglyphe. On utilise alors chaque caméra en utilisant des canaux précis, rouge et alpha pour la droite, verte et cyan pour la gauche.</p>
+
+<div class="highlight">Affichage anaglyphe :
+<pre><code class="cpp">case 'anaglyphe':
+  var gl = renderer.domElement.getContext('webgl');
+  renderer.clearDepth();
+  gl.colorMask(true, false, false, true);
+  renderer.render(scene, this.cameraLeft);
+
+  renderer.clearDepth();
+  gl.colorMask(false, true, true, true);
+  renderer.render(scene, this.cameraRight);
+
+  gl.colorMask(true, true, true, true);
+  break;
+</code></pre></div>
+
+<figure>
+	<img src="image/anaglyphe.png" width="800" alt="anaglyphe" />
+	<figcaption>Rendu Anaglyphe</figcaption>
+</figure>
+
+<h3>2 Profondeurs de champs</h3>
+
+<div class="highlight">Fonction PixelPitch :
+<pre><code class="cpp">pixelPitch: function() {
+  var screenResolutionHeight = this.screenResolutionWidth / this.aspectRatio;
+  var screenResolutionDiagonal = Math.sqrt(this.screenResolutionWidth * this.screenResolutionWidth + screenResolutionHeight * screenResolutionHeight);
+  return screenResolutionDiagonal / this.screenDiagonal;
+},
+
+screenSize: function() {
+  var pixelPitch = this.pixelPitch();
+  var screenResolutionHeight =  this.screenResolutionWidth / this.aspectRatio;
+  return new THREE.Vector2(this.screenResolutionWidth / pixelPitch, screenResolutionHeight / pixelPitch);
+}
+</code></pre></div>
+
+<h4>2.1 Cercle de confusion</h4>
+
+<p>Pupille de 4mm, distance observateur/moniteur 50cm, distance d'accommodation 50cm, écran de résolution 2560 x 1600 pixels, diagonale de 13,3 pouces :</p>
+<p> Formule : $c = \frac{f}{S1 - f} \times D \times \frac{|S - S1|}{S}$</p>
+<p> On a donc $S1 = 500mm$ ; $D = 4mm$ ; $f = 17mm$ (constante) et $S$ varie</p>
+<p> Point S à 250mm : $c = \frac{17}{500-17} \times 4 \times \frac{|250 - 500|}{250} = \frac{17 \times 4}{483} \times \frac{250}{250} = 0.140mm$</p>
+<p> Point S à 500mm : $c = \frac{17}{500-17} \times 4 \times \frac{|500 - 500|}{500} = \frac{17 \times 4}{483} \times \frac{0}{500} = 0mm$</p>
+<p> Point S à 750mm : $c = \frac{17}{500-17} \times 4 \times \frac{|750 - 500|}{750} = \frac{17 \times 4}{483} \times \frac{250}{750} = 0.046mm$</p>
+<p> Point S à 1000mm : $c = \frac{17}{500-17} \times 4 \times \frac{|1000 - 500|}{1000} = \frac{17 \times 4}{483} \times \frac{500}{1000} = 0.070mm$</p>
+<p> Point S à 2500mm : $c = \frac{17}{500-17} \times 4 \times \frac{|2500 - 500|}{2500} = \frac{17 \times 4}{483} \times \frac{2000}{2500} = 0.112mm$</p>
+
+<h4>2.2 Rendu avec profondeur de champs</h4>
+
+<p>Cette partie ne fonctionne pas, la méthode computeBlur a été implémentée, mais elle ne doit pas fonctionner correctement, on obtient une scène vide.</p>
+
+<div class="highlight">computeBlur :
+<pre><code class="cpp">int rPixel = int(radius / pixelPitch);
+vec4 color = vec4(0,0,0,0);
+
+int cpt = 0;
+
+int i = - rPixel;
+for (int x = 0; x <= 30; x++) {
+   if (i > rPixel)
+    break;
+
+   int j = - rPixel;
+   for (int y = 0; y <= 30; y++) {
+      if (j > rPixel)
+        break;
+
+      if (i*i + j*j <= rPixel*rPixel) {
+          vec2 uv = vUv + vec2(float(i), float(j)) / textureSize;
+          color.rgb += texture2D(colorMap, uv).rgb;
+          cpt++;
+      } j++;
+   } i++;
+}
+
+color.rgb /= float(cpt);
+return color;
+</code></pre></div>
+
+</div>
+
+<script type="text/javascript">
+	$('#toc').toc({
+	    'selectors': 'h2,h3,h4', //elements to use as headings
+	    'container': 'body', //element to find all selectors in
+	    'smoothScrolling': true, //enable or disable smooth scrolling on click
+	    'prefix': 'toc', //prefix for anchor tags and class names
+	    'onHighlight': function(el) {}, //called when a new section is highlighted
+	    'highlightOnScroll': true, //add class to heading that is currently in focus
+	    'highlightOffset': 100, //offset to trigger the next headline
+	    'anchorName': function(i, heading, prefix) { //custom function for anchor name
+	        return prefix+i;
+	    },
+	    'headerText': function(i, heading, $heading) { //custom function building the header-item text
+	        return $heading.text();
+	    },
+	'itemClass': function(i, heading, $heading, prefix) { // custom function for item class
+	  return $heading[0].tagName.toLowerCase();
+	}
+	});
+</script>
+
+</body>
